@@ -13,22 +13,35 @@ export default function AdminDashboard() {
   const [audioOutput, setAudioOutput] = useState('speakers');
   const [alertSound, setAlertSound] = useState('pop-suave');
 
-  useEffect(() => {
-    const q = query(collection(db, 'song_requests'), orderBy('created_at', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setRequests(data);
-      setLoading(false);
-      
-      // Lógica opcional: Si hay un mensaje nuevo y el estado es online, podrías disparar el sonido de alerta aquí
-    }, (error) => {
-      console.error("Error Firebase:", error);
-      setLoading(false);
-    });
+// Primero, asegúrate de tener archivos de sonido en tu carpeta /public
+// Ejemplo: /public/pop-suave.mp3
+
+useEffect(() => {
+  const q = query(collection(db, 'song_requests'), orderBy('created_at', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const data = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // LÓGICA AGREGADA: Detectar si hay nuevos mensajes para sonar
+    // Comparamos si la longitud de la nueva data es mayor a la anterior
+    // (Nota: Esto es básico, para producción idealmente comparas IDs)
+    if (!loading && data.length > requests.length) {
+       const audio = new Audio(`/${alertSound}.mp3`); // Asegúrate que el nombre coincida con el archivo
+       audio.play().catch(e => console.log("Interacción requerida para audio:", e));
+    }
+
+    setRequests(data);
+    setLoading(false);
+  }, (error) => {
+    console.error("Error Firebase:", error);
+    setLoading(false);
+  });
+
+  return () => unsubscribe();
+}, [alertSound]); // Agregamos alertSound a dependencias
 
     return () => unsubscribe();
   }, []);
